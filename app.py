@@ -464,8 +464,8 @@ def inject_mobile_css() -> None:
             transform: scale(0.98);
         }
 
-        /* Mobile Segmented Control Nav */
-        [data-testid="stSegmentedControl"] {
+        /* Persistent navigation row */
+        [data-testid="stRadio"] {
             position: sticky;
             top: 0.25rem;
             z-index: 100;
@@ -476,15 +476,28 @@ def inject_mobile_css() -> None:
             border-bottom: 1px solid var(--line);
         }
 
-        [data-testid="stSegmentedControl"] button {
-            color: var(--ink) !important;
-            background: transparent !important;
-            min-height: 42px !important;
+        [data-testid="stRadio"] > div {
+            flex-wrap: nowrap !important;
+            gap: 0.45rem !important;
         }
 
-        [data-testid="stSegmentedControl"] button[aria-pressed="true"] {
-            color: #ffffff !important;
-            background: var(--primary) !important;
+        [data-testid="stRadio"] label {
+            flex: 0 0 auto !important;
+            min-height: 42px !important;
+            padding: 0.55rem 0.8rem !important;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        [data-testid="stRadio"] label p {
+            color: var(--ink) !important;
+            font-weight: 600 !important;
+        }
+
+        [data-testid="stRadio"] label:has(input:checked) {
+            border-color: var(--primary);
+            background: var(--primary-light);
         }
 
         /* Metric cards styling */
@@ -1420,11 +1433,12 @@ def main() -> None:
     if "app_view" not in st.session_state:
         st.session_state.app_view = "📊 Overview"
 
-    active_view = st.segmented_control(
+    active_view = st.radio(
         "Navigation",
         options=nav_options,
-        default=st.session_state.app_view,
-        key="main_nav_segmented",
+        index=nav_options.index(st.session_state.app_view),
+        horizontal=True,
+        key="main_nav_radio",
         label_visibility="collapsed",
     )
     if active_view and active_view != st.session_state.app_view:
