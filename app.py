@@ -517,15 +517,33 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             --surface: #ffffff;
             --primary: #107c41;
             --primary-light: #e8f5ed;
+            --primary-dark: #075b30;
             --danger: #c0392b;
             --danger-light: #fbeee8;
-            --card-shadow: 0 2px 10px rgba(16, 124, 65, 0.05);
+            --card-shadow: 0 8px 24px rgba(20, 57, 38, 0.06);
         }}
 
         /* Fluid full-width mobile container */
         .stApp {{
-            background-color: #f7faf8;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background:
+                radial-gradient(circle at 8% 0%, rgba(185, 232, 204, 0.28), transparent 28rem),
+                linear-gradient(180deg, #f7faf8 0%, #eef6f1 100%);
+            color: var(--ink);
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        }}
+
+        h1, h2, h3 {{
+            color: var(--ink) !important;
+            letter-spacing: -0.02em;
+        }}
+
+        [data-testid="stMainBlockContainer"] > div {{
+            animation: ledgerly-rise 0.45s ease-out both;
+        }}
+
+        @keyframes ledgerly-rise {{
+            from {{ opacity: 0; transform: translateY(8px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
         }}
 
         /* Streamlit Top Header Styling - Transparent & non-blocking */
@@ -549,7 +567,18 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             min-height: 44px !important;
             font-weight: 600 !important;
             letter-spacing: 0.01em;
-            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
+        }}
+
+        button[kind="primary"], .stButton > button[kind="primary"] {{
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+        }}
+
+        button[kind="primary"]:hover, .stButton > button[kind="primary"]:hover {{
+            background: var(--primary-dark) !important;
+            box-shadow: 0 6px 16px rgba(16, 124, 65, 0.22) !important;
+            transform: translateY(-1px);
         }}
 
         button:active {{
@@ -621,6 +650,23 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             border-radius: 14px;
             padding: 0.85rem 1rem;
             box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }}
+
+        [data-testid="stMetric"]::before {{
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: linear-gradient(180deg, #26a269, #b8e8cc);
+        }}
+
+        [data-testid="stMetric"]:hover {{
+            transform: translateY(-3px);
+            border-color: #b8dbc6;
+            box-shadow: 0 12px 28px rgba(20, 57, 38, 0.1);
         }}
 
         [data-testid="stMetricLabel"] p {{
@@ -645,15 +691,25 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             padding: 1rem;
             margin-bottom: 0.75rem;
             box-shadow: var(--card-shadow);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }}
+
+        .mobile-card:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 12px 26px rgba(20, 57, 38, 0.1);
         }}
 
         .budget-banner {{
-            background: linear-gradient(135deg, #107c41, #189e54);
+            background:
+                radial-gradient(circle at 90% 15%, rgba(255,255,255,0.2), transparent 7rem),
+                linear-gradient(135deg, #075b30, #159653 58%, #35b873);
             color: white;
             border-radius: 14px;
             padding: 1.1rem;
             margin-bottom: 1.2rem;
-            box-shadow: 0 4px 16px rgba(16, 124, 65, 0.2);
+            box-shadow: 0 10px 26px rgba(16, 124, 65, 0.2);
+            position: relative;
+            overflow: hidden;
         }}
 
         .budget-banner h3 {{
