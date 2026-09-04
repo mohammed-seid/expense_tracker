@@ -90,6 +90,7 @@ def load_user_settings() -> Dict[str, Any]:
         "exchange_rate_usd_to_etb": DEFAULT_USD_TO_ETB_RATE,
         "monthly_budget": 1000.0,
         "currency": "ETB",
+        "nav_position": "Bottom (Mobile)",
         "category_budgets": {},
     }
     if not SETTINGS_FILE.exists():
@@ -104,6 +105,8 @@ def load_user_settings() -> Dict[str, Any]:
                 settings["monthly_budget_usd"] = 1000.0
             if "display_currency" not in data:
                 settings["display_currency"] = "ETB"
+            if "nav_position" not in data:
+                settings["nav_position"] = "Bottom (Mobile)"
             settings["monthly_budget"] = settings.get("monthly_budget", settings["monthly_budget_usd"])
             settings["currency"] = settings.get("currency", settings["display_currency"])
             return settings
@@ -422,11 +425,92 @@ def require_authentication() -> bool:
 # MOBILE-FIRST CSS
 # ============================================================================
 
-def inject_mobile_css() -> None:
-    st.markdown(
+def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
+    is_bottom = "Bottom" in str(nav_position)
+    
+    if is_bottom:
+        nav_styles = """
+        /* BOTTOM NAVIGATION BAR (Mobile Dock Style) */
+        [data-testid="stRadio"] {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100vw !important;
+            z-index: 999999 !important;
+            background: #ffffff !important;
+            border-top: 1px solid var(--line) !important;
+            border-bottom: none !important;
+            padding: 0.45rem 0.5rem calc(0.45rem + env(safe-area-inset-bottom, 0px)) !important;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08) !important;
+            margin: 0 !important;
+        }
+
+        [data-testid="stRadio"] > div {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: space-around !important;
+            align-items: center !important;
+            max-width: 650px !important;
+            margin: 0 auto !important;
+            gap: 0.35rem !important;
+            overflow-x: auto !important;
+            scrollbar-width: none !important;
+        }
+
+        [data-testid="stRadio"] label {
+            flex: 1 1 0 !important;
+            min-height: 44px !important;
+            padding: 0.45rem 0.25rem !important;
+        }
+
+        [data-testid="stRadio"] label p {
+            font-size: 0.78rem !important;
+        }
         """
+        container_padding_top = "3.8rem"
+        container_padding_bottom = "6.5rem"
+    else:
+        nav_styles = """
+        /* TOP NAVIGATION BAR (Header Style - 100% Visible & Unclipped) */
+        [data-testid="stRadio"] {
+            position: sticky !important;
+            top: 3.2rem !important;
+            z-index: 999 !important;
+            background: #f7faf8 !important;
+            border-bottom: 1px solid var(--line) !important;
+            padding: 0.35rem 0 0.65rem 0 !important;
+            margin-bottom: 1rem !important;
+        }
+
+        [data-testid="stRadio"] > div {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 0.5rem !important;
+            overflow-x: auto !important;
+            padding: 0.2rem 0 !important;
+            scrollbar-width: none !important;
+        }
+
+        [data-testid="stRadio"] label {
+            flex: 0 0 auto !important;
+            min-height: 42px !important;
+            padding: 0.55rem 0.9rem !important;
+        }
+
+        [data-testid="stRadio"] label p {
+            font-size: 0.88rem !important;
+        }
+        """
+        container_padding_top = "4.6rem"
+        container_padding_bottom = "4rem"
+
+    st.markdown(
+        f"""
         <style>
-        :root {
+        :root {{
             --ink: #0f1f17;
             --muted: #526359;
             --line: #dbe7df;
@@ -436,158 +520,185 @@ def inject_mobile_css() -> None:
             --danger: #c0392b;
             --danger-light: #fbeee8;
             --card-shadow: 0 2px 10px rgba(16, 124, 65, 0.05);
-        }
+        }}
 
         /* Fluid full-width mobile container */
-        .stApp {
+        .stApp {{
             background-color: #f7faf8;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+        }}
 
-        [data-testid="stMainBlockContainer"] {
-            padding-top: 1rem !important;
-            padding-bottom: 5rem !important;
+        /* Streamlit Top Header Styling - Transparent & non-blocking */
+        header[data-testid="stHeader"] {{
+            background: rgba(247, 250, 248, 0.90) !important;
+            backdrop-filter: blur(8px) !important;
+            height: 3.2rem !important;
+            z-index: 99 !important;
+        }}
+
+        [data-testid="stMainBlockContainer"] {{
+            padding-top: {container_padding_top} !important;
+            padding-bottom: {container_padding_bottom} !important;
             max-width: 900px !important;
             margin: 0 auto;
-        }
+        }}
 
         /* Touch-friendly interactive buttons */
-        button[kind="primary"], button[kind="secondary"], .stButton > button {
+        button[kind="primary"], button[kind="secondary"], .stButton > button {{
             border-radius: 12px !important;
             min-height: 44px !important;
             font-weight: 600 !important;
             letter-spacing: 0.01em;
             transition: transform 0.1s ease, box-shadow 0.1s ease;
-        }
+        }}
 
-        button:active {
+        button:active {{
             transform: scale(0.98);
-        }
+        }}
 
-        /* Persistent navigation row */
-        [data-testid="stRadio"] {
-            position: sticky;
-            top: 6rem;
-            z-index: 100;
-            overflow: visible;
-            white-space: nowrap;
-            padding: 0.35rem 0 0.5rem;
-            background: #f7faf8;
-            border-bottom: 1px solid var(--line);
-        }
+        /* Hide native radio circle indicators */
+        [data-testid="stRadio"] label > div:first-child {{
+            display: none !important;
+        }}
 
-        [data-testid="stRadio"] > div {
-            flex-wrap: nowrap !important;
-            gap: 0.45rem !important;
-            overflow-x: auto;
-            overflow-y: visible;
-            padding: 0.2rem 0 0.35rem;
-        }
+        /* Style radio option labels as modern buttons/tabs */
+        [data-testid="stRadio"] label {{
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 12px !important;
+            background: #ffffff !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+            margin: 0 !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+        }}
 
-        [data-testid="stRadio"] label {
-            flex: 0 0 auto !important;
-            min-height: 42px !important;
-            padding: 0.55rem 0.8rem !important;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            background: #ffffff;
-        }
-
-        [data-testid="stRadio"] label p {
+        [data-testid="stRadio"] label p {{
             color: var(--ink) !important;
             font-weight: 600 !important;
-        }
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.2 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+        }}
 
-        [data-testid="stRadio"] label:has(input:checked) {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
+        /* Active selected state */
+        [data-testid="stRadio"] label:has(input:checked) {{
+            border-color: var(--primary) !important;
+            background: var(--primary) !important;
+            box-shadow: 0 3px 10px rgba(16, 124, 65, 0.25) !important;
+        }}
+
+        [data-testid="stRadio"] label:has(input:checked) p {{
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }}
+
+        [data-testid="stRadio"] > div::-webkit-scrollbar {{
+            display: none !important;
+        }}
+
+        {nav_styles}
+
+        @media (max-width: 640px) {{
+            [data-testid="stRadio"] label {{
+                padding: 0.4rem 0.2rem !important;
+                min-height: 46px !important;
+            }}
+            [data-testid="stRadio"] label p {{
+                font-size: 0.72rem !important;
+                white-space: normal !important;
+            }}
+        }}
 
         /* Metric cards styling */
-        [data-testid="stMetric"] {
+        [data-testid="stMetric"] {{
             background: #ffffff;
             border: 1px solid var(--line);
             border-radius: 14px;
             padding: 0.85rem 1rem;
             box-shadow: var(--card-shadow);
-        }
+        }}
 
-        [data-testid="stMetricLabel"] p {
+        [data-testid="stMetricLabel"] p {{
             font-size: 0.82rem !important;
             color: var(--muted) !important;
             font-weight: 600 !important;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-        }
+        }}
 
-        [data-testid="stMetricValue"] {
+        [data-testid="stMetricValue"] {{
             font-weight: 700 !important;
             font-size: 1.45rem !important;
             color: var(--ink) !important;
-        }
+        }}
 
         /* Custom mobile cards */
-        .mobile-card {
+        .mobile-card {{
             background: #ffffff;
             border: 1px solid var(--line);
             border-radius: 14px;
             padding: 1rem;
             margin-bottom: 0.75rem;
             box-shadow: var(--card-shadow);
-        }
+        }}
 
-        .budget-banner {
+        .budget-banner {{
             background: linear-gradient(135deg, #107c41, #189e54);
             color: white;
             border-radius: 14px;
             padding: 1.1rem;
             margin-bottom: 1.2rem;
             box-shadow: 0 4px 16px rgba(16, 124, 65, 0.2);
-        }
+        }}
 
-        .budget-banner h3 {
+        .budget-banner h3 {{
             color: white !important;
             margin: 0 0 0.3rem 0;
             font-size: 1.15rem;
-        }
+        }}
 
-        .badge-income {
+        .badge-income {{
             background: #e6f7ed;
             color: #107c41;
             padding: 3px 8px;
             border-radius: 8px;
             font-weight: 600;
             font-size: 0.8rem;
-        }
+        }}
 
-        .badge-expense {
+        .badge-expense {{
             background: #fdeeee;
             color: #d9383a;
             padding: 3px 8px;
             border-radius: 8px;
             font-weight: 600;
             font-size: 0.8rem;
-        }
+        }}
 
-        .tx-item {
+        .tx-item {{
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0.75rem 0.5rem;
             border-bottom: 1px solid #edf3ef;
-        }
+        }}
 
-        .tx-item:last-child {
+        .tx-item:last-child {{
             border-bottom: none;
-        }
+        }}
 
-        .tx-left {
+        .tx-left {{
             display: flex;
             align-items: center;
             gap: 0.85rem;
-        }
+        }}
 
-        .tx-icon {
+        .tx-icon {{
             width: 40px;
             height: 40px;
             border-radius: 10px;
@@ -596,39 +707,39 @@ def inject_mobile_css() -> None:
             align-items: center;
             justify-content: center;
             font-size: 1.2rem;
-        }
+        }}
 
-        .tx-title {
+        .tx-title {{
             font-weight: 600;
             font-size: 0.95rem;
             color: #14241b;
             margin-bottom: 2px;
-        }
+        }}
 
-        .tx-sub {
+        .tx-sub {{
             font-size: 0.78rem;
             color: #6a7c71;
-        }
+        }}
 
-        .tx-amount {
+        .tx-amount {{
             text-align: right;
             font-weight: 700;
             font-size: 0.98rem;
-        }
+        }}
 
         /* Hide Streamlit footer branding */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
+        #MainMenu {{visibility: hidden;}}
+        footer {{visibility: hidden;}}
 
-        @media (max-width: 640px) {
-            [data-testid="stMainBlockContainer"] {
+        @media (max-width: 640px) {{
+            [data-testid="stMainBlockContainer"] {{
                 padding-left: 0.75rem !important;
                 padding-right: 0.75rem !important;
-            }
-            [data-testid="stMetricValue"] {
+            }}
+            [data-testid="stMetricValue"] {{
                 font-size: 1.25rem !important;
-            }
-        }
+            }}
+        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -1389,14 +1500,15 @@ def render_ledger(transactions: pd.DataFrame, currency: str, exchange_rate: floa
 # ============================================================================
 
 def main() -> None:
-    inject_mobile_css()
+    settings = load_user_settings()
+    nav_position = settings.get("nav_position", "Bottom (Mobile)")
+    inject_mobile_css(nav_position=nav_position)
 
     if not require_authentication():
         return
 
     # Load persistent data & settings
     transactions = load_transactions()
-    settings = load_user_settings()
 
     # Session currency setup. Transaction amounts remain stored in ETB.
     if "currency" not in st.session_state:
@@ -1420,6 +1532,17 @@ def main() -> None:
         if selected_currency != st.session_state.currency:
             st.session_state.currency = selected_currency
             settings["display_currency"] = selected_currency
+            save_user_settings(settings)
+            st.rerun()
+
+        selected_nav_pos = st.selectbox(
+            "Navigation Position",
+            options=["Bottom (Mobile)", "Top (Header)"],
+            index=0 if "Bottom" in nav_position else 1,
+            key="sidebar_nav_pos",
+        )
+        if selected_nav_pos != nav_position:
+            settings["nav_position"] = selected_nav_pos
             save_user_settings(settings)
             st.rerun()
 
