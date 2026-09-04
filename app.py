@@ -8,6 +8,8 @@ import json
 import io
 import shutil
 import calendar
+import re
+import requests
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, List
@@ -72,7 +74,9 @@ PAYMENT_ICONS: Dict[str, str] = {
     "Other": "🔄",
 }
 
-CURRENCIES = ["$", "€", "£", "ETB", "SAR", "AED", "₹", "¥", "C$", "A$", "CHF", "KES"]
+CURRENCIES = ["ETB", "USD"]
+CURRENCY_SYMBOLS = {"ETB": "Br", "USD": "$"}
+DEFAULT_USD_TO_ETB_RATE = 130.0
 
 
 # ============================================================================
@@ -81,8 +85,11 @@ CURRENCIES = ["$", "€", "£", "ETB", "SAR", "AED", "₹", "¥", "C$", "A$", "C
 
 def load_user_settings() -> Dict[str, Any]:
     default_settings = {
+        "monthly_budget_usd": 1000.0,
+        "display_currency": "ETB",
+        "exchange_rate_usd_to_etb": DEFAULT_USD_TO_ETB_RATE,
         "monthly_budget": 1000.0,
-        "currency": "$",
+        "currency": "ETB",
         "category_budgets": {},
     }
     if not SETTINGS_FILE.exists():
@@ -90,7 +97,16 @@ def load_user_settings() -> Dict[str, Any]:
     try:
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return {**default_settings, **data}
+            settings = {**default_settings, **data}
+            # Older versions stored an unqualified budget and a display symbol.
+            # Existing transaction amounts are ETB, so retain ETB as the initial view.
+            if "monthly_budget_usd" not in data:
+                settings["monthly_budget_usd"] = 1000.0
+            if "display_currency" not in data:
+                settings["display_currency"] = "ETB"
+            settings["monthly_budget"] = settings.get("monthly_budget", settings["monthly_budget_usd"])
+            settings["currency"] = settings.get("currency", settings["display_currency"])
+            return settings
     except Exception:
         return default_settings
 
@@ -280,7 +296,55 @@ def filtered_transactions(
 
 def format_currency(amount: float, currency_symbol: str = "$") -> str:
     """Formats float amount to readable currency."""
-    return f"{currency_symbol}{amount:,.2f}"
+    return f"{CURRENCY_SYMBOLS.get(currency_symbol, currency_symbol)}{amount:,.2f}"
+
+
+def convert_amount(amount: float, display_currency: str, usd_to_etb_rate: float) -> float:
+    """Converts an ETB-stored amount into the selected display currency."""
+    if display_currency == "USD":
+        return float(amount) / usd_to_etb_rate if usd_to_etb_rate > 0 else 0.0
+    return float(amount)
+
+
+def convert_usd_budget(amount: float, display_currency: str, usd_to_etb_rate: float) -> float:
+    """Converts a USD budget into the selected display currency."""
+    return float(amount) * usd_to_etb_rate if display_currency == "ETB" else float(amount)
+
+
+def display_transactions(
+    transactions: pd.DataFrame,
+    display_currency: str,
+    usd_to_etb_rate: float,
+) -> pd.DataFrame:
+    """Returns a display-only copy; the CSV remains stored in ETB."""
+    displayed = transactions.copy()
+    if not displayed.empty:
+        displayed["amount"] = displayed["amount"].apply(
+            lambda amount: convert_amount(amount, display_currency, usd_to_etb_rate)
+        )
+    return displayed
+
+
+def fetch_usd_to_etb_rate(settings: Dict[str, Any]) -> Tuple[float, bool]:
+    """Fetches the USD/ETB quote from Google Finance, falling back to the last rate."""
+    cached_rate = float(settings.get("exchange_rate_usd_to_etb", DEFAULT_USD_TO_ETB_RATE))
+    try:
+        response = requests.get(
+            "https://www.google.com/finance/quote/USD-ETB",
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=8,
+        )
+        response.raise_for_status()
+        matches = re.findall(r'data-last-price="([0-9]+(?:\.[0-9]+)?)"', response.text)
+        rate = float(matches[0]) if matches else 0.0
+        if rate <= 0:
+            raise ValueError("Google Finance did not return a valid quote")
+        settings["exchange_rate_usd_to_etb"] = rate
+        settings["exchange_rate_updated_at"] = datetime.now().isoformat(timespec="seconds")
+        save_user_settings(settings)
+        return rate, True
+    except (requests.RequestException, ValueError, TypeError, IndexError):
+        return cached_rate, False
 
 
 def get_category_icon(category_name: str) -> str:
@@ -537,6 +601,7 @@ def render_overview(
     date_preset: str,
     custom_dates: Optional[Tuple[date, date]],
     currency: str,
+    exchange_rate: float,
     settings: Dict[str, Any],
 ) -> None:
     # 1. Resolve date range
@@ -550,7 +615,7 @@ def render_overview(
         else:
             period_name = "All Time"
 
-    visible = filtered_transactions(transactions, active_range)
+    visible = display_transactions(filtered_transactions(transactions, active_range), currency, exchange_rate)
     income = visible.loc[visible["type"] == "Income", "amount"].sum()
     expense = visible.loc[visible["type"] == "Expense", "amount"].sum()
     balance = income - expense
@@ -612,7 +677,7 @@ def render_overview(
         )
 
     # --- Monthly Budget Card ---
-    monthly_budget = float(settings.get("monthly_budget", 0.0))
+    monthly_budget = convert_usd_budget(float(settings.get("monthly_budget_usd", 1000.0)), currency, exchange_rate)
     if monthly_budget > 0:
         # Calculate spending in current month for the budget tracker
         today = date.today()
@@ -803,7 +868,7 @@ def render_quick_add(currency: str) -> None:
 
         # Main Amount Input
         amount = st.number_input(
-            f"Amount ({currency})",
+            "Amount (ETB)",
             min_value=0.01,
             value=max(0.01, float(st.session_state.add_amount)) if st.session_state.add_amount > 0 else 10.00,
             step=1.0,
@@ -848,7 +913,7 @@ def render_quick_add(currency: str) -> None:
                     notes=notes,
                 )
                 st.session_state.add_amount = 0.0
-                st.toast(f"{tx_type} saved: {format_currency(float(amount), currency)}", icon="✅")
+                st.toast(f"{tx_type} saved: {format_currency(float(amount), 'ETB')}", icon="✅")
                 # Switch to Overview view
                 st.session_state.app_view = "📊 Overview"
                 st.rerun()
@@ -858,7 +923,7 @@ def render_quick_add(currency: str) -> None:
 # ANALYTICS VIEW
 # ============================================================================
 
-def render_analytics(transactions: pd.DataFrame, currency: str) -> None:
+def render_analytics(transactions: pd.DataFrame, currency: str, exchange_rate: float) -> None:
     st.markdown(
         """
         <div>
@@ -883,7 +948,7 @@ def render_analytics(transactions: pd.DataFrame, currency: str) -> None:
     )
 
     active_range = get_date_preset_range(period_choice)
-    visible = filtered_transactions(transactions, active_range)
+    visible = display_transactions(filtered_transactions(transactions, active_range), currency, exchange_rate)
     expenses = visible[visible["type"] == "Expense"]
     incomes = visible[visible["type"] == "Income"]
 
@@ -1015,7 +1080,7 @@ def render_analytics(transactions: pd.DataFrame, currency: str) -> None:
 # BUDGET & TARGET VIEW
 # ============================================================================
 
-def render_budget(transactions: pd.DataFrame, currency: str, settings: Dict[str, Any]) -> None:
+def render_budget(transactions: pd.DataFrame, currency: str, exchange_rate: float, settings: Dict[str, Any]) -> None:
     st.markdown(
         """
         <div>
@@ -1026,19 +1091,22 @@ def render_budget(transactions: pd.DataFrame, currency: str, settings: Dict[str,
         unsafe_allow_html=True,
     )
 
-    curr_budget = float(settings.get("monthly_budget", 1000.0))
+    curr_budget_usd = float(settings.get("monthly_budget_usd", 1000.0))
+    curr_budget = convert_usd_budget(curr_budget_usd, currency, exchange_rate)
 
     with st.container(border=True):
         st.markdown("<div style='font-weight:600; font-size:1.05rem; margin-bottom:0.5rem;'>Monthly Spending Target</div>", unsafe_allow_html=True)
         new_budget = st.number_input(
-            f"Set Monthly Budget Limit ({currency})",
+            f"Set Monthly Budget Limit ({CURRENCY_SYMBOLS[currency]})",
             min_value=0.0,
             value=curr_budget,
             step=50.0,
             format="%.2f",
         )
         if st.button("Save Budget Target", type="primary", use_container_width=True):
-            settings["monthly_budget"] = float(new_budget)
+            settings["monthly_budget_usd"] = (
+                float(new_budget) / exchange_rate if currency == "ETB" else float(new_budget)
+            )
             save_user_settings(settings)
             st.toast("Budget target updated successfully!", icon="🎯")
             st.rerun()
@@ -1050,6 +1118,7 @@ def render_budget(transactions: pd.DataFrame, currency: str, settings: Dict[str,
     end_of_month = today.replace(day=days_in_month)
 
     month_tx = filtered_transactions(transactions, (start_of_month, end_of_month))
+    month_tx = display_transactions(month_tx, currency, exchange_rate)
     month_expense = month_tx.loc[month_tx["type"] == "Expense", "amount"].sum()
     month_income = month_tx.loc[month_tx["type"] == "Income", "amount"].sum()
 
@@ -1109,7 +1178,7 @@ def render_budget(transactions: pd.DataFrame, currency: str, settings: Dict[str,
 # LEDGER VIEW (Search, Filter, Edit, Delete, Export)
 # ============================================================================
 
-def render_ledger(transactions: pd.DataFrame, currency: str) -> None:
+def render_ledger(transactions: pd.DataFrame, currency: str, exchange_rate: float) -> None:
     st.markdown(
         """
         <div>
@@ -1138,6 +1207,7 @@ def render_ledger(transactions: pd.DataFrame, currency: str) -> None:
         category=cat_filter if cat_filter != "All" else None,
         search_term=search,
     )
+    display_visible = display_transactions(visible, currency, exchange_rate)
 
     st.markdown(
         f"<div style='font-size:0.85rem; color:#526359; margin: 0.5rem 0;'>Showing <strong>{len(visible)}</strong> of {len(transactions)} total entries</div>",
@@ -1148,7 +1218,7 @@ def render_ledger(transactions: pd.DataFrame, currency: str) -> None:
         st.info("No matching transactions found.")
     else:
         # Display Transaction Cards with Edit / Delete actions
-        sorted_visible = visible.sort_values(["date", "created_at"], ascending=False)
+        sorted_visible = display_visible.sort_values(["date", "created_at"], ascending=False)
         for _, row in sorted_visible.iterrows():
             tx_id = str(row["id"])
             is_income = row["type"] == "Income"
@@ -1190,7 +1260,8 @@ def render_ledger(transactions: pd.DataFrame, currency: str) -> None:
                 with st.expander("⚙️ Edit / Delete", expanded=False):
                     with st.form(f"edit_form_{tx_id}"):
                         e_type = st.selectbox("Type", ["Expense", "Income"], index=0 if row["type"] == "Expense" else 1, key=f"e_type_{tx_id}")
-                        e_amount = st.number_input("Amount", min_value=0.01, value=float(row["amount"]), step=1.0, format="%.2f", key=f"e_amt_{tx_id}")
+                        raw_amount = float(transactions.loc[transactions["id"] == tx_id, "amount"].iloc[0])
+                        e_amount = st.number_input("Amount (ETB)", min_value=0.01, value=raw_amount, step=1.0, format="%.2f", key=f"e_amt_{tx_id}")
                         e_date = st.date_input("Date", value=row["date"] if pd.notna(row["date"]) else date.today(), key=f"e_date_{tx_id}")
 
                         if e_type == "Expense":
@@ -1280,11 +1351,12 @@ def main() -> None:
     transactions = load_transactions()
     settings = load_user_settings()
 
-    # Session currency setup
+    # Session currency setup. Transaction amounts remain stored in ETB.
     if "currency" not in st.session_state:
-        st.session_state.currency = settings.get("currency", "$")
+        st.session_state.currency = settings.get("display_currency", "ETB")
 
     currency = st.session_state.currency
+    exchange_rate, rate_is_live = fetch_usd_to_etb_rate(settings)
 
     # Sidebar for Settings & Management
     with st.sidebar:
@@ -1293,18 +1365,20 @@ def main() -> None:
 
         st.markdown("**Preferences**")
         selected_currency = st.selectbox(
-            "Currency Symbol",
+            "Display Currency",
             options=CURRENCIES,
             index=CURRENCIES.index(currency) if currency in CURRENCIES else 0,
             key="sidebar_currency",
         )
         if selected_currency != st.session_state.currency:
             st.session_state.currency = selected_currency
-            settings["currency"] = selected_currency
+            settings["display_currency"] = selected_currency
             save_user_settings(settings)
             st.rerun()
 
         st.caption(f"{len(transactions)} transactions safely recorded.")
+        rate_label = "live Google Finance rate" if rate_is_live else "cached exchange rate"
+        st.caption(f"1 USD = {exchange_rate:,.2f} ETB ({rate_label})")
 
         if st.button("Lock Ledger", icon=":material/lock:", use_container_width=True):
             st.session_state.authenticated = False
@@ -1350,15 +1424,15 @@ def main() -> None:
 
     # Render Active Screen
     if current_view == "📊 Overview":
-        render_overview(transactions, date_preset, custom_dates, currency, settings)
+        render_overview(transactions, date_preset, custom_dates, currency, exchange_rate, settings)
     elif current_view == "➕ Quick Add":
         render_quick_add(currency)
     elif current_view == "📈 Analytics":
-        render_analytics(transactions, currency)
+        render_analytics(transactions, currency, exchange_rate)
     elif current_view == "🎯 Budget":
-        render_budget(transactions, currency, settings)
+        render_budget(transactions, currency, exchange_rate, settings)
     elif current_view == "📑 Ledger":
-        render_ledger(transactions, currency)
+        render_ledger(transactions, currency, exchange_rate)
 
 
 if __name__ == "__main__":
