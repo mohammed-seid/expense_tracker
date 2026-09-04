@@ -466,9 +466,25 @@ def inject_mobile_css() -> None:
 
         /* Mobile Segmented Control Nav */
         [data-testid="stSegmentedControl"] {
+            position: sticky;
+            top: 0.25rem;
+            z-index: 100;
             overflow-x: auto;
             white-space: nowrap;
-            padding-bottom: 4px;
+            padding: 0.35rem 0 0.5rem;
+            background: #f7faf8;
+            border-bottom: 1px solid var(--line);
+        }
+
+        [data-testid="stSegmentedControl"] button {
+            color: var(--ink) !important;
+            background: transparent !important;
+            min-height: 42px !important;
+        }
+
+        [data-testid="stSegmentedControl"] button[aria-pressed="true"] {
+            color: #ffffff !important;
+            background: var(--primary) !important;
         }
 
         /* Metric cards styling */
