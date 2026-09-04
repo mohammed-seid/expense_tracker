@@ -335,8 +335,19 @@ def fetch_usd_to_etb_rate(settings: Dict[str, Any]) -> Tuple[float, bool]:
             timeout=8,
         )
         response.raise_for_status()
-        matches = re.findall(r'data-last-price="([0-9]+(?:\.[0-9]+)?)"', response.text)
-        rate = float(matches[0]) if matches else 0.0
+        page = response.text
+        matches = re.findall(
+            r'(?:data-last-price|data-price|price)\s*[:=]\s*["\']?([0-9]+(?:\.[0-9]+)?)',
+            page,
+            flags=re.IGNORECASE,
+        )
+        if not matches:
+            # Google Finance currently embeds the quote in AF_initDataCallback data.
+            matches = re.findall(r'0,0,([0-9]+(?:\.[0-9]+)?),4,1', page)
+        rate = next(
+            (float(value) for value in matches if 50.0 < float(value) < 500.0),
+            0.0,
+        )
         if rate <= 0:
             raise ValueError("Google Finance did not return a valid quote")
         settings["exchange_rate_usd_to_etb"] = rate
@@ -685,7 +696,11 @@ def render_overview(
         _, days_in_month = calendar.monthrange(today.year, today.month)
         last_of_month = today.replace(day=days_in_month)
 
-        this_month_tx = filtered_transactions(transactions, (first_of_month, last_of_month))
+        this_month_tx = display_transactions(
+            filtered_transactions(transactions, (first_of_month, last_of_month)),
+            currency,
+            exchange_rate,
+        )
         curr_month_expense = this_month_tx.loc[this_month_tx["type"] == "Expense", "amount"].sum()
         pct_used = min(100.0, (curr_month_expense / monthly_budget) * 100)
         remaining_budget = monthly_budget - curr_month_expense
