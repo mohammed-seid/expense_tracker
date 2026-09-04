@@ -467,9 +467,9 @@ def inject_mobile_css() -> None:
         /* Persistent navigation row */
         [data-testid="stRadio"] {
             position: sticky;
-            top: 4rem;
+            top: 6rem;
             z-index: 100;
-            overflow-x: auto;
+            overflow: visible;
             white-space: nowrap;
             padding: 0.35rem 0 0.5rem;
             background: #f7faf8;
@@ -479,6 +479,9 @@ def inject_mobile_css() -> None:
         [data-testid="stRadio"] > div {
             flex-wrap: nowrap !important;
             gap: 0.45rem !important;
+            overflow-x: auto;
+            overflow-y: visible;
+            padding: 0.2rem 0 0.35rem;
         }
 
         [data-testid="stRadio"] label {
