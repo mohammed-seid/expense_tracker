@@ -467,7 +467,7 @@ def inject_mobile_css() -> None:
         /* Persistent navigation row */
         [data-testid="stRadio"] {
             position: sticky;
-            top: 0.25rem;
+            top: 4rem;
             z-index: 100;
             overflow-x: auto;
             white-space: nowrap;
