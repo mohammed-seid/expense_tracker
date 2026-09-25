@@ -560,14 +560,14 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             left: 0 !important;
             right: 0 !important;
             width: 100vw !important;
-            z-index: 999999 !important;
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(14px) !important;
-            -webkit-backdrop-filter: blur(14px) !important;
-            border-top: 1px solid rgba(226, 232, 240, 0.9) !important;
+            z-index: 2147483647 !important; /* Highest 32-bit z-index to stay above overlays */
+            background: rgba(255, 255, 255, 0.98) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border-top: 1px solid rgba(226, 232, 240, 0.95) !important;
             border-bottom: none !important;
-            padding: 0.5rem 0.6rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important;
-            box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.08) !important;
+            padding: 0.35rem 0.4rem calc(0.35rem + env(safe-area-inset-bottom, 0px)) !important;
+            box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08) !important;
             margin: 0 !important;
         }
 
@@ -579,19 +579,25 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             align-items: center !important;
             max-width: 680px !important;
             margin: 0 auto !important;
-            gap: 0.4rem !important;
+            gap: 0.25rem !important;
             overflow-x: auto !important;
             scrollbar-width: none !important;
         }
 
         div.st-key-main_nav_radio [data-testid="stRadio"] label {
             flex: 1 1 0 !important;
-            min-height: 44px !important;
-            padding: 0.45rem 0.25rem !important;
+            min-width: 0 !important;
+            min-height: 42px !important;
+            padding: 0.35rem 0.15rem !important;
+            border-radius: 10px !important;
         }
 
         div.st-key-main_nav_radio [data-testid="stRadio"] label p {
-            font-size: 0.8rem !important;
+            font-size: 0.72rem !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: clip !important;
+            letter-spacing: -0.025em !important;
         }
         """
         container_padding_top = "3.2rem"
@@ -602,12 +608,12 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
         div.st-key-main_nav_radio [data-testid="stRadio"] {
             position: sticky !important;
             top: 3.2rem !important;
-            z-index: 999 !important;
+            z-index: 9999 !important;
             background: rgba(248, 250, 252, 0.96) !important;
             backdrop-filter: blur(12px) !important;
             -webkit-backdrop-filter: blur(12px) !important;
             border-bottom: 1px solid var(--line) !important;
-            padding: 0.4rem 0 0.65rem 0 !important;
+            padding: 0.4rem 0.5rem 0.65rem 0.5rem !important;
             margin-bottom: 1rem !important;
         }
 
@@ -615,7 +621,7 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
-            gap: 0.6rem !important;
+            gap: 0.5rem !important;
             overflow-x: auto !important;
             padding: 0.2rem 0 !important;
             scrollbar-width: none !important;
@@ -626,11 +632,13 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
         div.st-key-main_nav_radio [data-testid="stRadio"] label {
             flex: 0 0 auto !important;
             min-height: 42px !important;
-            padding: 0.55rem 1.1rem !important;
+            padding: 0.5rem 1rem !important;
+            border-radius: 10px !important;
         }
 
         div.st-key-main_nav_radio [data-testid="stRadio"] label p {
-            font-size: 0.88rem !important;
+            font-size: 0.86rem !important;
+            white-space: nowrap !important;
         }
         """
         container_padding_top = "4.2rem"
@@ -787,12 +795,47 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             transition: box-shadow 0.16s ease !important;
         }}
 
-        /* Navigation Radio Styling */
-        div.st-key-main_nav_radio [data-testid="stRadio"] label > div:first-child {{
-            display: none !important;
-        }}
+        /* Remove container border & hide floating label on nav radio */
+        div.st-key-main_nav_radio,
+        div.st-key-main_nav_radio > div:first-child:not([data-testid="stRadio"]) {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
 
-        div.st-key-main_nav_radio [data-testid="stRadio"] label {{
+        div.st-key-main_nav_radio [data-testid="stWidgetLabel"],
+        div.st-key-main_nav_radio > label {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Completely hide radio circles across all BaseWeb / Streamlit variants */
+        div.st-key-main_nav_radio input[type="radio"],
+        div.st-key-main_nav_radio input[type="radio"] + div,
+        div.st-key-main_nav_radio label > div:not(:last-child),
+        div.st-key-main_nav_radio [data-baseweb="radio"] > div:not(:last-child),
+        div.st-key-main_nav_radio [data-testid="stRadioOption"] > div:not(:last-child),
+        div.st-key-main_nav_radio [data-testid="stRadioOption"] [data-baseweb="radio"] > div:first-child,
+        div.st-key-main_nav_radio [role="radio"] > div:not(:last-child),
+        div.st-key-main_nav_radio [data-testid="stRadioOption"] svg,
+        div.st-key-main_nav_radio [data-testid="stRadioOption"] span:first-child {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        /* Navigation Radio Option Styling */
+        div.st-key-main_nav_radio [data-testid="stRadio"] label {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -803,33 +846,33 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             transition: all 0.15s ease-in-out !important;
             margin: 0 !important;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
-        }}
+        }
 
-        div.st-key-main_nav_radio [data-testid="stRadio"] label p {{
+        div.st-key-main_nav_radio [data-testid="stRadio"] label p {
             color: var(--ink-secondary) !important;
             font-weight: 600 !important;
             margin: 0 !important;
             padding: 0 !important;
-            line-height: 1.2 !important;
+            line-height: 1.15 !important;
             text-align: center !important;
             white-space: nowrap !important;
-        }}
+        }
 
-        div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) {{
+        div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) {
             border-color: var(--primary) !important;
             background: var(--primary) !important;
             box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3) !important;
-        }}
+        }
 
-        div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) p {{
+        div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) p {
             color: #ffffff !important;
             font-weight: 700 !important;
-        }}
+        }
 
-        div.st-key-main_nav_radio [data-testid="stRadio"] label:not(:has(input:checked)):hover {{
+        div.st-key-main_nav_radio [data-testid="stRadio"] label:not(:has(input:checked)):hover {
             background: #f8fafc !important;
             border-color: #cbd5e1 !important;
-        }}
+        }
 
         {nav_styles}
 
@@ -968,21 +1011,49 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             padding: 0.35rem 0.6rem !important;
         }}
 
-        /* Hide Streamlit footer branding */
-        #MainMenu {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
+        /* Hide Streamlit Community Cloud viewer badge, manage app button, and footer */
+        #MainMenu,
+        #manage-app-button,
+        [data-testid="manage-app-button"],
+        button[title*="Manage app"],
+        button[title*="Fork this app"],
+        div[class*="viewerBadge"],
+        div[class*="ProfileBadge"],
+        div[class*="manageApp"],
+        div[class*="StatusWidget"],
+        div[data-testid="stStatusWidget"],
+        div[class*="FloatingMenu"],
+        div[data-testid="stDecoration"],
+        footer,
+        header [data-testid="stDeployButton"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: fixed !important;
+            bottom: -9999px !important;
+            right: -9999px !important;
+            width: 0 !important;
+            height: 0 !important;
+            z-index: -99999 !important;
+        }
 
         @media (max-width: 640px) {{
             [data-testid="stMainBlockContainer"] {{
-                padding-left: 0.85rem !important;
-                padding-right: 0.85rem !important;
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
             }}
             [data-testid="stMetricValue"] {{
-                font-size: 1.3rem !important;
+                font-size: 1.25rem !important;
+            }}
+            div.st-key-main_nav_radio [data-testid="stRadio"] label {{
+                padding: 0.35rem 0.12rem !important;
+                min-height: 40px !important;
             }}
             div.st-key-main_nav_radio [data-testid="stRadio"] label p {{
-                font-size: 0.72rem !important;
-                white-space: normal !important;
+                font-size: 0.68rem !important;
+                white-space: nowrap !important;
+                letter-spacing: -0.035em !important;
             }}
         }}
         </style>
@@ -1925,8 +1996,14 @@ def main() -> None:
             st.rerun()
 
     # Navigation Dock / Bar
-    nav_options = ["📊 Overview", "➕ Quick Add", "📈 Analytics", "🎯 Budget", "📑 Ledger"]
+    nav_options = ["📊 Overview", "➕ Add", "📈 Stats", "🎯 Budget", "📑 Ledger"]
     if "app_view" not in st.session_state:
+        st.session_state.app_view = "📊 Overview"
+    if st.session_state.app_view in ["➕ Quick Add", "➕ Add"]:
+        st.session_state.app_view = "➕ Add"
+    elif st.session_state.app_view in ["📈 Analytics", "📈 Stats"]:
+        st.session_state.app_view = "📈 Stats"
+    elif st.session_state.app_view not in nav_options:
         st.session_state.app_view = "📊 Overview"
 
     active_view = st.radio(
@@ -1968,9 +2045,9 @@ def main() -> None:
     # Render Active Screen
     if current_view == "📊 Overview":
         render_overview(transactions, date_preset, custom_dates, currency, exchange_rate, settings)
-    elif current_view == "➕ Quick Add":
+    elif current_view in ["➕ Add", "➕ Quick Add"]:
         render_quick_add(currency)
-    elif current_view == "📈 Analytics":
+    elif current_view in ["📈 Stats", "📈 Analytics"]:
         render_analytics(transactions, currency, exchange_rate)
     elif current_view == "🎯 Budget":
         render_budget(transactions, currency, exchange_rate, settings)
