@@ -552,7 +552,9 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
     is_bottom = "Bottom" in str(nav_position)
 
     if is_bottom:
-        nav_styles = """
+        container_padding_top = "3.2rem"
+        container_padding_bottom = "6.5rem"
+        nav_pos_css = """
         /* BOTTOM NAVIGATION DOCK (Mobile First & Modern) */
         div.st-key-main_nav_radio [data-testid="stRadio"] {
             position: fixed !important;
@@ -600,10 +602,10 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             letter-spacing: -0.025em !important;
         }
         """
-        container_padding_top = "3.2rem"
-        container_padding_bottom = "6.5rem"
     else:
-        nav_styles = """
+        container_padding_top = "4.2rem"
+        container_padding_bottom = "4rem"
+        nav_pos_css = """
         /* TOP NAVIGATION HEADER (Desktop & Tablet) */
         div.st-key-main_nav_radio [data-testid="stRadio"] {
             position: sticky !important;
@@ -641,425 +643,424 @@ def inject_mobile_css(nav_position: str = "Bottom (Mobile)") -> None:
             white-space: nowrap !important;
         }
         """
-        container_padding_top = "4.2rem"
-        container_padding_bottom = "4rem"
 
+    # 1. Dynamic positioning & container padding
     st.markdown(
-        f"""
-        <style>
-        :root {{
-            --ink: #0f172a;
-            --ink-secondary: #334155;
-            --muted: #64748b;
-            --line: #e2e8f0;
-            --surface: #ffffff;
-            --surface-subtle: #f8fafc;
-            --primary: #059669;
-            --primary-hover: #047857;
-            --primary-light: #ecfdf5;
-            --danger: #dc2626;
-            --danger-light: #fef2f2;
-            --success: #16a34a;
-            --success-light: #f0fdf4;
-            --warning: #d97706;
-            --warning-light: #fef3c7;
-            --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
-            --card-shadow-hover: 0 12px 28px -4px rgba(15, 23, 42, 0.09), 0 4px 10px -2px rgba(15, 23, 42, 0.03);
-        }}
-
-        /* App Background & Typography */
-        .stApp {{
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
-            color: var(--ink) !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif !important;
-        }}
-
-        h1, h2, h3, h4 {{
-            color: var(--ink) !important;
-            letter-spacing: -0.025em !important;
-            font-weight: 700 !important;
-        }}
-
-        /* Container Spacing */
-        [data-testid="stMainBlockContainer"] {{
-            padding-top: {container_padding_top} !important;
-            padding-bottom: {container_padding_bottom} !important;
-            max-width: 920px !important;
-            margin: 0 auto;
-        }}
-
-        /* Modern Glass Header */
-        header[data-testid="stHeader"] {{
-            background: rgba(248, 250, 252, 0.88) !important;
-            backdrop-filter: blur(10px) !important;
-            -webkit-backdrop-filter: blur(10px) !important;
-            height: 3.2rem !important;
-            z-index: 99 !important;
-            border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
-        }}
-
-        /* Modernized Metric Cards */
-        [data-testid="stMetric"] {{
-            background: #ffffff !important;
-            border: 1px solid var(--line) !important;
-            border-radius: 16px !important;
-            padding: 0.95rem 1.15rem !important;
-            box-shadow: var(--card-shadow) !important;
-            position: relative !important;
-            overflow: hidden !important;
-            transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease !important;
-        }}
-
-        [data-testid="stMetric"]::before {{
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(180deg, #10b981, #059669);
-            border-radius: 4px 0 0 4px;
-        }}
-
-        [data-testid="stMetric"]:hover {{
-            transform: translateY(-2px) !important;
-            border-color: #cbd5e1 !important;
-            box-shadow: var(--card-shadow-hover) !important;
-        }}
-
-        [data-testid="stMetricLabel"] p {{
-            font-size: 0.78rem !important;
-            color: var(--muted) !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.06em !important;
-        }}
-
-        [data-testid="stMetricValue"] {{
-            font-weight: 800 !important;
-            font-size: 1.55rem !important;
-            color: var(--ink) !important;
-            letter-spacing: -0.02em !important;
-        }}
-
-        [data-testid="stMetricDelta"] {{
-            font-weight: 600 !important;
-            font-size: 0.82rem !important;
-        }}
-
-        /* Interactive Buttons */
-        button[kind="primary"], .stButton > button[kind="primary"] {{
-            background: linear-gradient(180deg, #059669 0%, #047857 100%) !important;
-            color: #ffffff !important;
-            border: none !important;
-            border-radius: 12px !important;
-            min-height: 46px !important;
-            font-weight: 600 !important;
-            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25) !important;
-            transition: all 0.16s ease !important;
-        }}
-
-        button[kind="primary"]:hover, .stButton > button[kind="primary"]:hover {{
-            background: linear-gradient(180deg, #047857 0%, #065f46 100%) !important;
-            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35) !important;
-            transform: translateY(-1px) !important;
-        }}
-
-        button[kind="secondary"], .stButton > button[kind="secondary"] {{
-            background: #ffffff !important;
-            color: var(--ink) !important;
-            border: 1px solid var(--line) !important;
-            border-radius: 12px !important;
-            min-height: 44px !important;
-            font-weight: 600 !important;
-            transition: all 0.16s ease !important;
-        }}
-
-        button[kind="secondary"]:hover, .stButton > button[kind="secondary"]:hover {{
-            background: #f8fafc !important;
-            border-color: #cbd5e1 !important;
-            transform: translateY(-1px) !important;
-        }}
-
-        button:active {{
-            transform: scale(0.98) !important;
-        }}
-
-        /* Clean Card Containers */
-        [data-testid="stVerticalBlockBorderWrapper"] > div:has(> [data-testid="stVerticalBlock"]) {{
-            background: #ffffff;
-            border: 1px solid var(--line) !important;
-            border-radius: 16px !important;
-            box-shadow: var(--card-shadow) !important;
-            padding: 1.15rem !important;
-            transition: box-shadow 0.16s ease !important;
-        }}
-
-        /* Remove container border & hide floating label on nav radio */
-        div.st-key-main_nav_radio,
-        div.st-key-main_nav_radio > div:first-child:not([data-testid="stRadio"]) {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        div.st-key-main_nav_radio [data-testid="stWidgetLabel"],
-        div.st-key-main_nav_radio > label {
-            display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        /* Completely hide radio circles across all BaseWeb / Streamlit variants */
-        div.st-key-main_nav_radio input[type="radio"],
-        div.st-key-main_nav_radio input[type="radio"] + div,
-        div.st-key-main_nav_radio label > div:not(:last-child),
-        div.st-key-main_nav_radio [data-baseweb="radio"] > div:not(:last-child),
-        div.st-key-main_nav_radio [data-testid="stRadioOption"] > div:not(:last-child),
-        div.st-key-main_nav_radio [data-testid="stRadioOption"] [data-baseweb="radio"] > div:first-child,
-        div.st-key-main_nav_radio [role="radio"] > div:not(:last-child),
-        div.st-key-main_nav_radio [data-testid="stRadioOption"] svg,
-        div.st-key-main_nav_radio [data-testid="stRadioOption"] span:first-child {
-            display: none !important;
-            width: 0 !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-        }
-
-        /* Navigation Radio Option Styling */
-        div.st-key-main_nav_radio [data-testid="stRadio"] label {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            border: 1px solid var(--line) !important;
-            border-radius: 12px !important;
-            background: #ffffff !important;
-            cursor: pointer !important;
-            transition: all 0.15s ease-in-out !important;
-            margin: 0 !important;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
-        }
-
-        div.st-key-main_nav_radio [data-testid="stRadio"] label p {
-            color: var(--ink-secondary) !important;
-            font-weight: 600 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 1.15 !important;
-            text-align: center !important;
-            white-space: nowrap !important;
-        }
-
-        div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) {
-            border-color: var(--primary) !important;
-            background: var(--primary) !important;
-            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3) !important;
-        }
-
-        div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) p {
-            color: #ffffff !important;
-            font-weight: 700 !important;
-        }
-
-        div.st-key-main_nav_radio [data-testid="stRadio"] label:not(:has(input:checked)):hover {
-            background: #f8fafc !important;
-            border-color: #cbd5e1 !important;
-        }
-
-        {nav_styles}
-
-        /* Budget Banner Card */
-        .budget-banner {{
-            background: linear-gradient(135deg, #064e3b 0%, #065f46 55%, #047857 100%);
-            color: #ffffff;
-            border-radius: 16px;
-            padding: 1.25rem 1.4rem;
-            margin-bottom: 1.2rem;
-            box-shadow: 0 10px 28px rgba(6, 78, 59, 0.25);
-            position: relative;
-            overflow: hidden;
-        }}
-
-        .budget-banner::after {{
-            content: "";
-            position: absolute;
-            top: -40%;
-            right: -20%;
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-        }}
-
-        .budget-banner h3 {{
-            color: #ffffff !important;
-            margin: 0 0 0.3rem 0;
-            font-size: 1.25rem;
-            font-weight: 700;
-        }}
-
-        /* Transaction List Items */
-        .tx-item {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.85rem 0.5rem;
-            border-bottom: 1px solid #f1f5f9;
-            transition: background 0.12s ease;
-        }}
-
-        .tx-item:hover {{
-            background: #f8fafc;
-            border-radius: 10px;
-        }}
-
-        .tx-item:last-child {{
-            border-bottom: none;
-        }}
-
-        .tx-left {{
-            display: flex;
-            align-items: center;
-            gap: 0.9rem;
-        }}
-
-        .tx-icon {{
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: #ecfdf5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.35rem;
-            flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.08);
-        }}
-
-        .tx-icon-income {{
-            background: #f0fdf4;
-        }}
-
-        .tx-icon-expense {{
-            background: #fef2f2;
-        }}
-
-        .tx-title {{
-            font-weight: 600;
-            font-size: 0.96rem;
-            color: var(--ink);
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-        }}
-
-        .tx-sub {{
-            font-size: 0.8rem;
-            color: var(--muted);
-            margin-top: 2px;
-        }}
-
-        .tx-amount {{
-            text-align: right;
-            font-weight: 700;
-            font-size: 1.05rem;
-            letter-spacing: -0.01em;
-        }}
-
-        /* Badges */
-        .badge-income {{
-            background: #dcfce7;
-            color: #15803d;
-            padding: 2px 7px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.75rem;
-        }}
-
-        .badge-expense {{
-            background: #fee2e2;
-            color: #b91c1c;
-            padding: 2px 7px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.75rem;
-        }}
-
-        .badge-pill {{
-            background: #f1f5f9;
-            color: #475569;
-            padding: 3px 9px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.78rem;
-        }}
-
-        /* Quick Amount Chips */
-        .chip-button button {{
-            min-height: 38px !important;
-            font-size: 0.88rem !important;
-            border-radius: 10px !important;
-            padding: 0.35rem 0.6rem !important;
-        }}
-
-        /* Hide Streamlit Community Cloud viewer badge, manage app button, and footer */
-        #MainMenu,
-        #manage-app-button,
-        [data-testid="manage-app-button"],
-        button[title*="Manage app"],
-        button[title*="Fork this app"],
-        div[class*="viewerBadge"],
-        div[class*="ProfileBadge"],
-        div[class*="manageApp"],
-        div[class*="StatusWidget"],
-        div[data-testid="stStatusWidget"],
-        div[class*="FloatingMenu"],
-        div[data-testid="stDecoration"],
-        footer,
-        header [data-testid="stDeployButton"] {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            position: fixed !important;
-            bottom: -9999px !important;
-            right: -9999px !important;
-            width: 0 !important;
-            height: 0 !important;
-            z-index: -99999 !important;
-        }
-
-        @media (max-width: 640px) {{
-            [data-testid="stMainBlockContainer"] {{
-                padding-left: 0.75rem !important;
-                padding-right: 0.75rem !important;
-            }}
-            [data-testid="stMetricValue"] {{
-                font-size: 1.25rem !important;
-            }}
-            div.st-key-main_nav_radio [data-testid="stRadio"] label {{
-                padding: 0.35rem 0.12rem !important;
-                min-height: 40px !important;
-            }}
-            div.st-key-main_nav_radio [data-testid="stRadio"] label p {{
-                font-size: 0.68rem !important;
-                white-space: nowrap !important;
-                letter-spacing: -0.035em !important;
-            }}
-        }}
-        </style>
-        """,
+        f"<style>{nav_pos_css}\n[data-testid='stMainBlockContainer'] {{ padding-top: {container_padding_top} !important; padding-bottom: {container_padding_bottom} !important; }}</style>",
         unsafe_allow_html=True,
     )
+
+    # 2. Static application styling (Regular string, not an f-string)
+    static_css = """
+    <style>
+    :root {
+        --ink: #0f172a;
+        --ink-secondary: #334155;
+        --muted: #64748b;
+        --line: #e2e8f0;
+        --surface: #ffffff;
+        --surface-subtle: #f8fafc;
+        --primary: #059669;
+        --primary-hover: #047857;
+        --primary-light: #ecfdf5;
+        --danger: #dc2626;
+        --danger-light: #fef2f2;
+        --success: #16a34a;
+        --success-light: #f0fdf4;
+        --warning: #d97706;
+        --warning-light: #fef3c7;
+        --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+        --card-shadow-hover: 0 12px 28px -4px rgba(15, 23, 42, 0.09), 0 4px 10px -2px rgba(15, 23, 42, 0.03);
+    }
+
+    /* App Background & Typography */
+    .stApp {
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+        color: var(--ink) !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif !important;
+    }
+
+    h1, h2, h3, h4 {
+        color: var(--ink) !important;
+        letter-spacing: -0.025em !important;
+        font-weight: 700 !important;
+    }
+
+    /* Container Spacing */
+    [data-testid="stMainBlockContainer"] {
+        max-width: 920px !important;
+        margin: 0 auto;
+    }
+
+    /* Modern Glass Header */
+    header[data-testid="stHeader"] {
+        background: rgba(248, 250, 252, 0.88) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        height: 3.2rem !important;
+        z-index: 99 !important;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+    }
+
+    /* Modernized Metric Cards */
+    [data-testid="stMetric"] {
+        background: #ffffff !important;
+        border: 1px solid var(--line) !important;
+        border-radius: 16px !important;
+        padding: 0.95rem 1.15rem !important;
+        box-shadow: var(--card-shadow) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease !important;
+    }
+
+    [data-testid="stMetric"]::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #10b981, #059669);
+        border-radius: 4px 0 0 4px;
+    }
+
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-2px) !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: var(--card-shadow-hover) !important;
+    }
+
+    [data-testid="stMetricLabel"] p {
+        font-size: 0.78rem !important;
+        color: var(--muted) !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+    }
+
+    [data-testid="stMetricValue"] {
+        font-weight: 800 !important;
+        font-size: 1.55rem !important;
+        color: var(--ink) !important;
+        letter-spacing: -0.02em !important;
+    }
+
+    [data-testid="stMetricDelta"] {
+        font-weight: 600 !important;
+        font-size: 0.82rem !important;
+    }
+
+    /* Interactive Buttons */
+    button[kind="primary"], .stButton > button[kind="primary"] {
+        background: linear-gradient(180deg, #059669 0%, #047857 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 12px !important;
+        min-height: 46px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25) !important;
+        transition: all 0.16s ease !important;
+    }
+
+    button[kind="primary"]:hover, .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(180deg, #047857 0%, #065f46 100%) !important;
+        box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    button[kind="secondary"], .stButton > button[kind="secondary"] {
+        background: #ffffff !important;
+        color: var(--ink) !important;
+        border: 1px solid var(--line) !important;
+        border-radius: 12px !important;
+        min-height: 44px !important;
+        font-weight: 600 !important;
+        transition: all 0.16s ease !important;
+    }
+
+    button[kind="secondary"]:hover, .stButton > button[kind="secondary"]:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        transform: translateY(-1px) !important;
+    }
+
+    button:active {
+        transform: scale(0.98) !important;
+    }
+
+    /* Clean Card Containers */
+    [data-testid="stVerticalBlockBorderWrapper"] > div:has(> [data-testid="stVerticalBlock"]) {
+        background: #ffffff;
+        border: 1px solid var(--line) !important;
+        border-radius: 16px !important;
+        box-shadow: var(--card-shadow) !important;
+        padding: 1.15rem !important;
+        transition: box-shadow 0.16s ease !important;
+    }
+
+    /* Remove container border & hide floating label on nav radio */
+    div.st-key-main_nav_radio,
+    div.st-key-main_nav_radio > div:first-child:not([data-testid="stRadio"]) {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    div.st-key-main_nav_radio [data-testid="stWidgetLabel"],
+    div.st-key-main_nav_radio > label {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Completely hide radio circles across all BaseWeb / Streamlit variants */
+    div.st-key-main_nav_radio input[type="radio"],
+    div.st-key-main_nav_radio input[type="radio"] + div,
+    div.st-key-main_nav_radio label > div:not(:last-child),
+    div.st-key-main_nav_radio [data-baseweb="radio"] > div:not(:last-child),
+    div.st-key-main_nav_radio [data-testid="stRadioOption"] > div:not(:last-child),
+    div.st-key-main_nav_radio [data-testid="stRadioOption"] [data-baseweb="radio"] > div:first-child,
+    div.st-key-main_nav_radio [role="radio"] > div:not(:last-child),
+    div.st-key-main_nav_radio [data-testid="stRadioOption"] svg,
+    div.st-key-main_nav_radio [data-testid="stRadioOption"] span:first-child {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    /* Navigation Radio Option Styling */
+    div.st-key-main_nav_radio [data-testid="stRadio"] label {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: 1px solid var(--line) !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease-in-out !important;
+        margin: 0 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    }
+
+    div.st-key-main_nav_radio [data-testid="stRadio"] label p {
+        color: var(--ink-secondary) !important;
+        font-weight: 600 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.15 !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+
+    div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) {
+        border-color: var(--primary) !important;
+        background: var(--primary) !important;
+        box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3) !important;
+    }
+
+    div.st-key-main_nav_radio [data-testid="stRadio"] label:has(input:checked) p {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+
+    div.st-key-main_nav_radio [data-testid="stRadio"] label:not(:has(input:checked)):hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    /* Budget Banner Card */
+    .budget-banner {
+        background: linear-gradient(135deg, #064e3b 0%, #065f46 55%, #047857 100%);
+        color: #ffffff;
+        border-radius: 16px;
+        padding: 1.25rem 1.4rem;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 10px 28px rgba(6, 78, 59, 0.25);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .budget-banner::after {
+        content: "";
+        position: absolute;
+        top: -40%;
+        right: -20%;
+        width: 250px;
+        height: 250px;
+        background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .budget-banner h3 {
+        color: #ffffff !important;
+        margin: 0 0 0.3rem 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    /* Transaction List Items */
+    .tx-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.85rem 0.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.12s ease;
+    }
+
+    .tx-item:hover {
+        background: #f8fafc;
+        border-radius: 10px;
+    }
+
+    .tx-item:last-child {
+        border-bottom: none;
+    }
+
+    .tx-left {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+    }
+
+    .tx-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: #ecfdf5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.08);
+    }
+
+    .tx-icon-income {
+        background: #f0fdf4;
+    }
+
+    .tx-icon-expense {
+        background: #fef2f2;
+    }
+
+    .tx-title {
+        font-weight: 600;
+        font-size: 0.96rem;
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    .tx-sub {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .tx-amount {
+        text-align: right;
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: -0.01em;
+    }
+
+    /* Badges */
+    .badge-income {
+        background: #dcfce7;
+        color: #15803d;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .badge-expense {
+        background: #fee2e2;
+        color: #b91c1c;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .badge-pill {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 3px 9px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.78rem;
+    }
+
+    /* Quick Amount Chips */
+    .chip-button button {
+        min-height: 38px !important;
+        font-size: 0.88rem !important;
+        border-radius: 10px !important;
+        padding: 0.35rem 0.6rem !important;
+    }
+
+    /* Hide Streamlit Community Cloud viewer badge, manage app button, and footer */
+    #MainMenu,
+    #manage-app-button,
+    [data-testid="manage-app-button"],
+    button[title*="Manage app"],
+    button[title*="Fork this app"],
+    div[class*="viewerBadge"],
+    div[class*="ProfileBadge"],
+    div[class*="manageApp"],
+    div[class*="StatusWidget"],
+    div[data-testid="stStatusWidget"],
+    div[class*="FloatingMenu"],
+    div[data-testid="stDecoration"],
+    footer,
+    header [data-testid="stDeployButton"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: fixed !important;
+        bottom: -9999px !important;
+        right: -9999px !important;
+        width: 0 !important;
+        height: 0 !important;
+        z-index: -99999 !important;
+    }
+
+    @media (max-width: 640px) {
+        [data-testid="stMainBlockContainer"] {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 1.25rem !important;
+        }
+        div.st-key-main_nav_radio [data-testid="stRadio"] label {
+            padding: 0.35rem 0.12rem !important;
+            min-height: 40px !important;
+        }
+        div.st-key-main_nav_radio [data-testid="stRadio"] label p {
+            font-size: 0.68rem !important;
+            white-space: nowrap !important;
+            letter-spacing: -0.035em !important;
+        }
+    }
+    </style>
+    """
+    st.markdown(static_css, unsafe_allow_html=True)
 
 
 # ============================================================================
