@@ -1,4 +1,10 @@
 {
-  "exchange_rate_usd_to_etb": 162.348,
-  "exchange_rate_updated_at": "2026-09-04T19:14:40"
+  "monthly_budget_usd": 1000.0,
+  "display_currency": "ETB",
+  "exchange_rate_usd_to_etb": 162.349839,
+  "monthly_budget": 1000.0,
+  "currency": "ETB",
+  "nav_position": "Bottom (Mobile)",
+  "category_budgets": {},
+  "exchange_rate_updated_at": "2026-09-06T11:58:03"
 }

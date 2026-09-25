@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import hmac
 import os
 import json
+import base64
 import io
 import shutil
 import calendar
@@ -126,6 +127,94 @@ def save_user_settings(settings: Dict[str, Any]) -> None:
 # DATA LAYER (Zero-Data-Loss Guaranteed)
 # ============================================================================
 
+def github_storage_config() -> Optional[Dict[str, str]]:
+    """Returns GitHub storage settings when configured in Streamlit secrets."""
+    try:
+        settings = st.secrets["github"]
+    except (KeyError, FileNotFoundError):
+        return None
+
+    config = {
+        "token": str(settings.get("token", "")).strip(),
+        "owner": str(settings.get("owner", "")).strip(),
+        "repo": str(settings.get("repo", "")).strip(),
+        "path": str(settings.get("csv_path", "expenses.csv")).strip(),
+    }
+    if not all(config[key] for key in ("token", "owner", "repo", "path")):
+        raise RuntimeError("GitHub storage is configured, but token, owner, repo, or csv_path is missing.")
+    branch = str(settings.get("branch", "")).strip()
+    if branch:
+        config["branch"] = branch
+    return config
+
+
+def github_file_url(config: Dict[str, str]) -> str:
+    path = requests.utils.quote(config["path"], safe="/")
+    return f"https://api.github.com/repos/{config['owner']}/{config['repo']}/contents/{path}"
+
+
+def github_headers(config: Dict[str, str]) -> Dict[str, str]:
+    return {
+        "Authorization": f"Bearer {config['token']}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
+def read_github_transactions(config: Dict[str, str]) -> Tuple[pd.DataFrame, Optional[str]]:
+    params = {"ref": config["branch"]} if config.get("branch") else None
+    try:
+        response = requests.get(
+            github_file_url(config), headers=github_headers(config), params=params, timeout=15
+        )
+        if response.status_code == 404:
+            return pd.DataFrame(columns=TRANSACTION_COLUMNS), None
+        response.raise_for_status()
+        file_info = response.json()
+        csv_bytes = base64.b64decode(file_info["content"])
+        transactions = pd.read_csv(io.BytesIO(csv_bytes), dtype={"id": str})
+    except (requests.RequestException, KeyError, ValueError, pd.errors.ParserError) as exc:
+        raise RuntimeError("Could not read transactions from the configured GitHub repository.") from exc
+
+    for column in TRANSACTION_COLUMNS:
+        if column not in transactions:
+            transactions[column] = ""
+    transactions["date"] = pd.to_datetime(transactions["date"], errors="coerce").dt.date
+    transactions["amount"] = pd.to_numeric(transactions["amount"], errors="coerce").fillna(0.0)
+    transactions["notes"] = transactions["notes"].fillna("").astype(str)
+    transactions["id"] = transactions["id"].astype(str)
+    transactions = transactions[TRANSACTION_COLUMNS]
+    transactions.attrs["github_sha"] = file_info.get("sha")
+    return transactions, file_info.get("sha")
+
+
+def write_github_transactions(transactions: pd.DataFrame, config: Dict[str, str]) -> None:
+    _, current_sha = read_github_transactions(config)
+    expected_sha = transactions.attrs.get("github_sha")
+    if expected_sha != current_sha:
+        raise RuntimeError("The GitHub CSV changed since it was loaded. Reload the app and retry your change.")
+
+    df_to_save = transactions.copy()
+    df_to_save["date"] = pd.to_datetime(df_to_save["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    content = base64.b64encode(df_to_save.to_csv(index=False).encode("utf-8")).decode("ascii")
+    payload: Dict[str, str] = {
+        "message": "Update expense transactions",
+        "content": content,
+    }
+    if current_sha:
+        payload["sha"] = current_sha
+    if config.get("branch"):
+        payload["branch"] = config["branch"]
+
+    try:
+        response = requests.put(
+            github_file_url(config), headers=github_headers(config), json=payload, timeout=15
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError("Could not save transactions to GitHub; the existing remote CSV was preserved.") from exc
+
+
 def backup_data() -> None:
     """Creates a local backup before modifying existing data."""
     try:
@@ -137,12 +226,17 @@ def backup_data() -> None:
 
 def load_transactions() -> pd.DataFrame:
     """Safely loads transactions while preserving column integrity."""
+    config = github_storage_config()
+    if config:
+        transactions, _ = read_github_transactions(config)
+        return transactions
+
     if not DATA_FILE.exists():
         return pd.DataFrame(columns=TRANSACTION_COLUMNS)
     try:
         transactions = pd.read_csv(DATA_FILE, dtype={"id": str})
-    except (OSError, pd.errors.ParserError):
-        return pd.DataFrame(columns=TRANSACTION_COLUMNS)
+    except (OSError, pd.errors.ParserError) as exc:
+        raise RuntimeError(f"Could not read {DATA_FILE.name}; no changes were saved.") from exc
 
     for column in TRANSACTION_COLUMNS:
         if column not in transactions:
@@ -157,11 +251,23 @@ def load_transactions() -> pd.DataFrame:
 
 def save_transactions(transactions: pd.DataFrame) -> None:
     """Safely writes transactions to disk with prior backup."""
+    config = github_storage_config()
+    if config:
+        write_github_transactions(transactions, config)
+        return
+
     backup_data()
     # Format date back to string ISO
     df_to_save = transactions.copy()
     df_to_save["date"] = pd.to_datetime(df_to_save["date"], errors="coerce").dt.strftime("%Y-%m-%d")
-    df_to_save.to_csv(DATA_FILE, index=False)
+    temporary_file = DATA_FILE.with_suffix(DATA_FILE.suffix + ".tmp")
+    try:
+        df_to_save.to_csv(temporary_file, index=False)
+        os.replace(temporary_file, DATA_FILE)
+    except OSError as exc:
+        if temporary_file.exists():
+            temporary_file.unlink()
+        raise RuntimeError(f"Could not save {DATA_FILE.name}; existing data was preserved.") from exc
 
 
 def add_transaction(
@@ -187,6 +293,7 @@ def add_transaction(
         "notes": notes.strip(),
         "created_at": datetime.now().isoformat(timespec="seconds"),
     }])
+    record.attrs.update(transactions.attrs)
     if transactions.empty:
         save_transactions(record)
     else:

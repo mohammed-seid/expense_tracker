@@ -4,6 +4,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 import tempfile
 import shutil
+import base64
+from unittest.mock import Mock, patch
 
 # We will import helper logic from app
 import app
@@ -17,14 +19,66 @@ class TestExpenseTracker(unittest.TestCase):
         # Monkeypatch DATA_FILE and SETTINGS_FILE
         self.orig_data_file = app.DATA_FILE
         self.orig_settings_file = getattr(app, "SETTINGS_FILE", None)
+        self.orig_github_storage_config = app.github_storage_config
         app.DATA_FILE = self.test_csv
         app.SETTINGS_FILE = self.test_config
+        app.github_storage_config = lambda: None
 
     def tearDown(self):
         app.DATA_FILE = self.orig_data_file
         if self.orig_settings_file:
             app.SETTINGS_FILE = self.orig_settings_file
+        app.github_storage_config = self.orig_github_storage_config
         shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_github_storage_reads_and_writes_remote_csv(self):
+        config = {"token": "test-token", "owner": "test-owner", "repo": "test-repo", "path": "expenses.csv"}
+        csv_content = (
+            "id,date,type,amount,category,detail,payment_method,notes,created_at\n"
+            "123,2026-09-02,Expense,12.5,Food & dining,Self,Cash,Meal,2026-09-02T12:00:00\n"
+        )
+        get_response = Mock(status_code=200)
+        get_response.json.return_value = {
+            "sha": "file-sha",
+            "content": base64.b64encode(csv_content.encode("utf-8")).decode("ascii"),
+        }
+        put_response = Mock()
+
+        with patch.object(app, "github_storage_config", return_value=config), \
+             patch.object(app.requests, "get", return_value=get_response), \
+             patch.object(app.requests, "put", return_value=put_response) as put_request:
+            transactions = app.load_transactions()
+            transactions.at[0, "notes"] = "Updated remotely"
+            app.save_transactions(transactions)
+
+        self.assertEqual(transactions.iloc[0]["amount"], 12.5)
+        put_payload = put_request.call_args.kwargs["json"]
+        self.assertEqual(put_payload["sha"], "file-sha")
+        saved_csv = base64.b64decode(put_payload["content"]).decode("utf-8")
+        self.assertIn("Updated remotely", saved_csv)
+
+    def test_github_storage_rejects_stale_csv(self):
+        config = {"token": "test-token", "owner": "test-owner", "repo": "test-repo", "path": "expenses.csv"}
+        csv_content = "id,date,type,amount,category,detail,payment_method,notes,created_at\n"
+        response_before = Mock(status_code=200)
+        response_before.json.return_value = {
+            "sha": "original-sha",
+            "content": base64.b64encode(csv_content.encode("utf-8")).decode("ascii"),
+        }
+        response_after = Mock(status_code=200)
+        response_after.json.return_value = {
+            "sha": "newer-sha",
+            "content": base64.b64encode(csv_content.encode("utf-8")).decode("ascii"),
+        }
+
+        with patch.object(app, "github_storage_config", return_value=config), \
+             patch.object(app.requests, "get", side_effect=[response_before, response_after]), \
+             patch.object(app.requests, "put") as put_request:
+            transactions = app.load_transactions()
+            with self.assertRaisesRegex(RuntimeError, "changed since it was loaded"):
+                app.save_transactions(transactions)
+
+        put_request.assert_not_called()
 
     def test_existing_data_file_loading(self):
         # Create CSV with the exact format of the user's existing expenses.csv
@@ -41,6 +95,12 @@ class TestExpenseTracker(unittest.TestCase):
         self.assertEqual(df.iloc[0]["type"], "Expense")
         self.assertEqual(df.iloc[0]["category"], "Food & dining")
         self.assertEqual(df.iloc[0]["date"], date(2026, 9, 2))
+
+    def test_unreadable_data_file_does_not_look_empty(self):
+        self.test_csv.write_text("not,a,valid,ledger\n\"", encoding="utf-8")
+
+        with self.assertRaises(RuntimeError):
+            app.load_transactions()
 
     def test_add_transaction(self):
         app.add_transaction(
